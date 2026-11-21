@@ -29,14 +29,26 @@ const EXACT_ACTIVE_DAYS = {
   '2026-11-14': { level: 1, count: 1 }
 };
 
-// Accurate GitHub Contribution Heatmap
+// 52-Week Full Calendar with Month & Day Labels (Scalable SVG)
 const GithubCalendarVisual = ({ darkMode }) => {
-  const weeks = useMemo(() => {
+  const { weeks, monthLabels } = useMemo(() => {
     const list = [];
-    const startDate = new Date('2025-11-17');
+    // Start on Sunday, Nov 23, 2025 -> 52 full weeks ending Nov 21, 2026
+    const startDate = new Date('2025-11-23');
+    const monthsPos = [];
+    const seenMonths = new Set();
     
-    for (let w = 0; w < 48; w++) {
+    for (let w = 0; w < 52; w++) {
       const week = [];
+      const weekStartDate = new Date(startDate);
+      weekStartDate.setDate(startDate.getDate() + w * 7);
+      const monthName = weekStartDate.toLocaleString('en-US', { month: 'short' });
+
+      if (!seenMonths.has(monthName)) {
+        seenMonths.add(monthName);
+        monthsPos.push({ name: monthName, weekIndex: w });
+      }
+
       for (let d = 0; d < 7; d++) {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + (w * 7 + d));
@@ -50,7 +62,7 @@ const GithubCalendarVisual = ({ darkMode }) => {
       }
       list.push(week);
     }
-    return list;
+    return { weeks: list, monthLabels: monthsPos };
   }, []);
 
   const getCellColor = (level) => {
@@ -60,7 +72,7 @@ const GithubCalendarVisual = ({ darkMode }) => {
         case 2: return '#006d32';
         case 3: return '#26a641';
         case 4: return '#39d353';
-        default: return 'rgba(255, 255, 255, 0.06)';
+        default: return 'rgba(255, 255, 255, 0.08)';
       }
     } else {
       switch (level) {
@@ -73,52 +85,79 @@ const GithubCalendarVisual = ({ darkMode }) => {
     }
   };
 
-  const months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
-
   return (
-    <div className="gh-compact-calendar">
-      <div className="gh-calendar-header-compact">
-        <div className="gh-stat-tag">
+    <div className="gh-full-calendar-wrapper">
+      <div className="gh-calendar-top-bar">
+        <div className="gh-cal-meta-left">
           <Calendar size={13} className="gh-green-icon" />
-          <span><strong>99 contributions</strong> in the last year</span>
+          <span><strong>99 contributions</strong> in 2026</span>
         </div>
-        <div className="gh-cal-legend-compact">
-          <span className="legend-txt">Less</span>
+        <div className="gh-cal-legend-bar">
+          <span className="legend-label">Less</span>
           {[0, 1, 2, 3, 4].map((lvl) => (
             <span
               key={lvl}
-              className="legend-box"
+              className="legend-square"
               style={{ backgroundColor: getCellColor(lvl) }}
             />
           ))}
-          <span className="legend-txt">More</span>
+          <span className="legend-label">More</span>
         </div>
       </div>
 
-      <div className="gh-months-row-compact">
-        {months.map((m, i) => (
-          <span key={i} className="gh-month-tag">{m}</span>
+      {/* Responsive SVG Calendar rendering all 52 weeks cleanly */}
+      <svg
+        viewBox="0 0 684 114"
+        className="gh-calendar-svg"
+        aria-label="GitHub contribution calendar"
+      >
+        {/* Month labels positioned at corresponding week columns */}
+        {monthLabels.map((m) => (
+          <text
+            key={m.name}
+            x={28 + m.weekIndex * 12.4}
+            y={11}
+            className="gh-svg-month-label"
+          >
+            {m.name}
+          </text>
         ))}
-      </div>
 
-      <div className="gh-grid-scroll">
-        {weeks.map((week, wIdx) => (
-          <div key={wIdx} className="gh-grid-column">
-            {week.map((cell, dIdx) => (
-              <span
-                key={dIdx}
-                className="gh-grid-dot"
-                style={{ backgroundColor: getCellColor(cell.level) }}
-                title={cell.count ? `${cell.count} contributions on ${cell.date}` : `No contributions on ${cell.date}`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
+        {/* Day labels on the left: Mon, Wed, Fri */}
+        <text x={4} y={38} className="gh-svg-day-label">Mon</text>
+        <text x={4} y={63} className="gh-svg-day-label">Wed</text>
+        <text x={4} y={88} className="gh-svg-day-label">Fri</text>
 
-      <div className="gh-calendar-footer-compact">
-        <span>Peak Day: <strong>22 contributions</strong> (Jul 20, 2026)</span>
-        <span className="gh-profile-tag">github.com/ash-in07</span>
+        {/* 52 Columns x 7 Days Rectangles */}
+        {weeks.map((week, wIdx) => {
+          const x = 28 + wIdx * 12.4;
+          return week.map((cell, dIdx) => {
+            const y = 18 + dIdx * 12.4;
+            const tooltip = cell.count
+              ? `${cell.count} contribution${cell.count > 1 ? 's' : ''} on ${cell.date}`
+              : `No contributions on ${cell.date}`;
+            return (
+              <rect
+                key={`${wIdx}-${dIdx}`}
+                x={x}
+                y={y}
+                width={9.8}
+                height={9.8}
+                rx={2}
+                ry={2}
+                fill={getCellColor(cell.level)}
+                className="gh-svg-cell"
+              >
+                <title>{tooltip}</title>
+              </rect>
+            );
+          });
+        })}
+      </svg>
+
+      <div className="gh-calendar-bottom-info">
+        <span>Peak Sprint: <strong>22 contributions</strong> (Jul 20, 2026)</span>
+        <span className="gh-user-link">github.com/ash-in07</span>
       </div>
     </div>
   );
@@ -182,8 +221,8 @@ const CoreRepositoriesVisual = () => {
   const actualRepos = [
     { name: 'Multi-Language-IDE', lang: 'JavaScript', color: '#f7df1e', date: 'Nov 2026' },
     { name: 'clg-bus-tracking-', lang: 'HTML / JS / IoT', color: '#38bdf8', date: 'Jul 2026' },
-    { name: 'ATM-INTERFACE', lang: 'Java', color: '#b07219', date: 'Feb 2026' },
-    { name: 'Pipeline-Hazards...', lang: 'Architecture', color: '#f34b7d', date: 'Mar 2026' }
+    { name: 'ieee-web', lang: 'HTML / CSS / JS', color: '#10b981', date: 'Feb 2026' },
+    { name: 'ATM-INTERFACE', lang: 'Java', color: '#b07219', date: 'Feb 2026' }
   ];
 
   return (
@@ -237,7 +276,7 @@ export default function GithubStats({ darkMode }) {
     },
     {
       title: 'Featured Repositories',
-      description: 'Live active projects: Web IDE, Bus Tracking, ATM System, and Pipeline Hazards.',
+      description: 'Live active projects: Web IDE, Bus Tracking, ATM System, and IEEE Portal.',
       visual: <CoreRepositoriesVisual />,
       colSpan: 2,
       rowSpan: 1,
@@ -283,7 +322,7 @@ export default function GithubStats({ darkMode }) {
         <MagicBento
           items={bentoItems}
           columns={4}
-          rowHeight={210}
+          rowHeight={215}
           gap={16}
           radius={18}
           theme={darkMode ? 'dark' : 'light'}

@@ -32,10 +32,15 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Dynamic WebGL FluxLines Background */}
+      {/* Dynamic WebGL FluxLines Background: Blue in dark mode, Green in light mode */}
       <div className="flux-lines-bg-layer" aria-hidden="true">
         <FluxLines
-          colors={darkMode ? ['#38bdf8', '#3b82f6', '#818cf8'] : ['#2563eb', '#3b82f6', '#60a5fa']}
+          colors={
+            darkMode
+              ? ['#38bdf8', '#3b82f6', '#60a5fa'] // Blue in dark mode
+              : ['#10b981', '#22c55e', '#16a34a', '#059669'] // Green in light mode
+          }
+          lightMode={!darkMode}
           glow={1.8}
           rimWidth={0.2}
           lineWidth={1}
@@ -46,7 +51,7 @@ export default function App() {
           mouseInteraction={true}
           clickSwirl={true}
           transparent={true}
-          opacity={darkMode ? 0.32 : 0.22}
+          opacity={darkMode ? 0.32 : 0.28}
         />
       </div>
 
